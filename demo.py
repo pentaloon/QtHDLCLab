@@ -1,11 +1,6 @@
-import sys
+import sys, serial, logging
 from PyQt5 import QtWidgets
-import logging
 from simple_hdlc import HDLC
-import serial 
-
-# Log messages to stdout
-logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s %(name)s %(levelname)s %(message)s')
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
@@ -17,30 +12,104 @@ class QTextEditLogger(logging.Handler):
         msg = self.format(record)
         self.widget.appendPlainText(msg)
 
+class QTextInput(object):
+    def __init__(self, parent):
+        super().__init__()
+        self.widget = QtWidgets.QLineEdit(parent)
+        self.widget.setText("hello")
+
+    def get_bytes(self):
+        return self.widget.text().encode("utf-8")
+
 class MainWindow(QtWidgets.QDialog, QtWidgets.QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("HDLC demo")
+        self.setWindowTitle("HDLC Lab")
         self.setGeometry(200,200,600,400)
-        logTextBox = QTextEditLogger(self)
-        logTextBox.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-        logging.getLogger().addHandler(logTextBox)
+        # self._bgcolor = self.palette().color(QPalette.Background)
+        self._sendBtn = QtWidgets.QPushButton(self)
+        self._sendBtn.setText('Send')
+        self._sendBtn.setFocus()
+        self._dataOutLabel = QtWidgets.QLabel()
+        self._dataOutLabel.setText("Data to send")
+        self._dataOut = QTextInput(self)
+        self._bytesOutLabel = QtWidgets.QLabel()
+        self._bytesOutLabel.setText("Total bytes out")
+        self._bytesOut = QtWidgets.QLineEdit(self)
+        self._bytesOut.setReadOnly(True)
+        self._bytesOut.setStyleSheet("background: lightgray;")
+        self._addressLabel = QtWidgets.QLabel()
+        self._addressLabel.setText("Address")
+        self._address = QtWidgets.QLineEdit(self)
+        self._address.setInputMask("Hh")
+        self._address.setText("00")
+        self._address.setMaximumWidth(60)
+        self._ctrlLabel = QtWidgets.QLabel()
+        self._ctrlLabel.setText("Control")
+        self._ctrl = QtWidgets.QLineEdit(self)
+        self._ctrl.setInputMask("Hh")
+        self._ctrl.setText("00")
+        self._ctrl.setMaximumWidth(60)
+        self._dataOutLengthLabel = QtWidgets.QLabel()
+        self._dataOutLengthLabel.setText("Data out")
+        self._dataOutLength = QtWidgets.QLineEdit(self)
+        self._dataOutLength.setReadOnly(True)
+        self._dataOutLength.setMaximumWidth(60)
+        self._dataOutLength.setStyleSheet("background: lightgray;")
+        self._bytesInLabel = QtWidgets.QLabel()
+        self._bytesInLabel.setText("Total bytes in")
+        self._bytesIn = QtWidgets.QLineEdit(self)
+        self._bytesIn.setReadOnly(True)
+        self._bytesIn.setStyleSheet("background: lightgray;")
+        self._dataInLabel = QtWidgets.QLabel()
+        self._dataInLabel.setText("Received data")
+        self._dataIn = QTextInput(self)
+        self._dataInLengthLabel = QtWidgets.QLabel()
+        self._dataInLengthLabel.setText("Data in")
+        self._dataInLength = QtWidgets.QLineEdit(self)
+        self._dataInLength.setReadOnly(True)
+        self._dataInLength.setMaximumWidth(60)
+        self._dataInLength.setStyleSheet("background: lightgray;")
+        self._loggerLabel = QtWidgets.QLabel()
+        self._loggerLabel.setText("Log")
+        logger = QTextEditLogger(self)
+        logger.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+        logging.getLogger().addHandler(logger)
         logging.getLogger().setLevel(logging.DEBUG)
-        self._button = QtWidgets.QPushButton(self)
-        self._button.setText('Test')
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(logTextBox.widget)
-        layout.addWidget(self._button)
-        self.setLayout(layout)
-        self._button.clicked.connect(self.test)
+        grid = QtWidgets.QGridLayout()
+        grid.addWidget(self._dataOutLabel,0,0)
+        grid.addWidget(self._dataOut.widget,1,0,1,1)
+        grid.addWidget(self._addressLabel,0,1)
+        grid.addWidget(self._address,1,1)
+        grid.addWidget(self._ctrlLabel,0,2)
+        grid.addWidget(self._ctrl,1,2)
+        grid.addWidget(self._sendBtn,1,5)
+        grid.addWidget(self._bytesOutLabel,5,0)
+        grid.addWidget(self._bytesOut,6,0)
+        grid.addWidget(self._dataOutLengthLabel,5,1)
+        grid.addWidget(self._dataOutLength,6,1)
+        grid.addWidget(self._bytesInLabel,7,0)
+        grid.addWidget(self._bytesIn,8,0)
+        grid.addWidget(self._dataInLengthLabel,7,1)
+        grid.addWidget(self._dataInLength,8,1)
+        grid.addWidget(self._dataInLabel,9,0)
+        grid.addWidget(self._dataIn.widget,10,0)
+        grid.addWidget(self._loggerLabel,11,0)
+        grid.addWidget(logger.widget,12,0,1,6)
+        self.setLayout(grid)
+        self._sendBtn.clicked.connect(self.test)
 
     def test(self):
         s = serial.serial_for_url('loop://', timeout=1)
         # s = serial.Serial('/dev/tty0')
         h = HDLC(s)
-        h.sendFrame(b"hello")
+        t = self._dataOut.get_bytes()
+        h.sendFrame(t)
+        self._dataOutLength.setText(str(len(t)))
         logging.info(h.readFrame())  # Blocking
 
+# Log messages to stdout
+logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s %(name)s %(levelname)s %(message)s')
 app = QtWidgets.QApplication(sys.argv)
 mw = MainWindow()
 mw.show()
