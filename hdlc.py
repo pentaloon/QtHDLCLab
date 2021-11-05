@@ -1,4 +1,4 @@
-import logging, sys
+import logging
 import struct
 import time
 from threading import Thread
@@ -41,7 +41,6 @@ class Frame(object):
 
     def addByte(self, b):
         if b == END_CHAR:
-            logger.debug("frame start")
             if self.state == self.STATE_ESCAPE:
                 return self.abort("invalid framing (got end in escapemode)")
             else:
@@ -60,7 +59,7 @@ class Frame(object):
         self.data.append(b)
 
         if len(self.data) > MAX_FRAME_LENGTH:
-            return self.abort("frame to big")
+            return self.abort("frame too big")
         
         return False
 
