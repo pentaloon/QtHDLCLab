@@ -122,6 +122,8 @@ class MainWindow(QtWidgets.QDialog):
             self.RX_frame.retrieve(self.session)
         except Exception as Argument:
             logging.exception('transmission failed')
+        finally:
+            self.serialConnection.close()
 
     def update_session(self):
         self.serialConnection = serial.serial_for_url(str(self.port.currentText()), baudrate=int(self.baudrate.currentText()), timeout=1)
